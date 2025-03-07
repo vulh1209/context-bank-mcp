@@ -1,24 +1,25 @@
 {
-  "name": "mcp-quickstart-ts",
+  "name": "@sipheragi/context-bank",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Context Bank MCP",
+  "license": "MIT",
+  "author": "vu.le",
+  "homepage": "https://sipheragi.com",
   "type": "module",
   "bin": {
-    "context-bank": "./build/index.js"
+    "mcp-server-context-bank": "./build/index.js"
   },
   "scripts": {
     "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
     "start": "node build/server.js",
-    "dev": "tsc && node build/server.js",
     "setup": "chmod +x setup-env.sh && ./setup-env.sh"
   },
   "files": [
     "build"
   ],
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "devDependencies": {
     "@types/node": "^22.10.0",
     "prettier": "^3.5.3",
