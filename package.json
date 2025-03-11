@@ -1,6 +1,6 @@
 {
   "name": "context-bank",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Context Bank MCP",
   "license": "MIT",
   "author": "vu.le",
@@ -10,7 +10,7 @@
     "mcp-server-context-bank": "./build/index.js"
   },
   "scripts": {
-    "build": "tsc && shx chmod +x build/*.js",
+    "build": "tsc && node ./scripts/add-shebang.js && shx chmod +x build/*.js",
     "prepare": "npm run build",
     "watch": "tsc --watch"
   },
