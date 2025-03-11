@@ -10,10 +10,9 @@
     "mcp-server-context-bank": "./build/index.js"
   },
   "scripts": {
-    "build": "mkdir -p build && tsc && test -d build && test \"$(find build -name '*.js' | wc -l)\" -gt 0 && shx chmod +x build/*.js || true",
+    "build": "tsc && shx chmod +x build/*.js",
     "prepare": "npm run build",
-    "watch": "tsc --watch",
-    "setup": "chmod +x setup-env.sh && ./setup-env.sh"
+    "watch": "tsc --watch"
   },
   "files": [
     "build"
