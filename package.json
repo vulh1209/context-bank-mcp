@@ -7,16 +7,16 @@
   "homepage": "https://sipheragi.com",
   "type": "module",
   "bin": {
-    "mcp-server-context-bank": "./dist/index.js"
+    "mcp-server-context-bank": "./build/index.js"
   },
   "scripts": {
-    "build": "mkdir -p dist && tsc && test -d dist && test \"$(find dist -name '*.js' | wc -l)\" -gt 0 && shx chmod +x dist/*.js || true",
+    "build": "mkdir -p build && tsc && test -d build && test \"$(find build -name '*.js' | wc -l)\" -gt 0 && shx chmod +x build/*.js || true",
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "setup": "chmod +x setup-env.sh && ./setup-env.sh"
   },
   "files": [
-    "dist"
+    "build"
   ],
   "keywords": [],
   "devDependencies": {

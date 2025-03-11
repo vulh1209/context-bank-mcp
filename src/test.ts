@@ -1,9 +1,12 @@
 import axios from "axios";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 async function callChatAPI() {
   try {
     const response = await axios.post(
-      "http://172.30.22.52:3000/api/chat/send-message",
+      `${process.env.CHAT_API_BASE}/api/chat/send-message`,
       {
         alternate_assistant_id: 0,
         chat_session_id: "e22c4ae6-ad90-4375-9ba4-179cf3af618e",
@@ -99,7 +102,7 @@ async function test() {
     parent_message_id: null,
   };
   const res = (await makeOnyxRequestStream(
-    "http://172.30.22.52:3000/api/chat/send-message",
+    `${process.env.CHAT_API_BASE}/api/chat/send-message`,
     body,
   )) as any;
   return res?.message;
