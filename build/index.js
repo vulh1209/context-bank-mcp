@@ -8,7 +8,6 @@ import * as dotenv from "dotenv";
 dotenv.config();
 // Use environment variables with fallback values
 const ONYX_API_BASE = process.env.ONYX_API_BASE || "http://172.30.22.52:3000";
-const ONYX_API_KEY = process.env.ONYX_API_KEY || "";
 const LOG_LEVEL = process.env.LOG_LEVEL || "info";
 // Configure logging based on LOG_LEVEL
 const logger = {
@@ -34,7 +33,6 @@ const logger = {
 async function makeOnyxRequest(url, body) {
     const headers = {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${ONYX_API_KEY}`,
     };
     try {
         const response = await axios.post(url, body, { headers });
@@ -51,7 +49,6 @@ async function makeOnyxRequest(url, body) {
 async function makeOnyxRequestStream(url, body) {
     const headers = {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${ONYX_API_KEY}`,
     };
     try {
         const response = await axios.post(url, body, { headers });
