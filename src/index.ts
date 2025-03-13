@@ -37,7 +37,7 @@ const logger = {
 
 async function makeOnyxRequest<T>(
   url: string,
-  body?: CreateChatSessionRequest,
+  body?: CreateChatSessionRequest | DocumentSearchRequest,
 ): Promise<T | null> {
   const headers = {
     "Content-Type": "application/json",
@@ -178,168 +178,262 @@ interface SendMessageResponse {
   };
 }
 
+interface DocumentSearchRequest {
+  message: string;
+  search_type: string;
+  retrieval_options: {
+    enable_auto_detect_filters: boolean;
+    offset: number;
+    limit: number;
+    dedupe_docs: boolean;
+  };
+  evaluation_type: string;
+  chunks_above: number;
+  chunks_below: number;
+  full_doc: boolean;
+}
+
+interface DocumentSearchResponse {
+  top_documents: Array<{
+    document_id: string;
+    chunk_ind: number;
+    semantic_identifier: string;
+    link: string;
+    blurb: string;
+    source_type: string;
+    boost: number;
+    hidden: boolean;
+    metadata: Record<string, any>;
+    score: number;
+    is_relevant: boolean | null;
+    relevance_explanation: string | null;
+    match_highlights: string[];
+    updated_at: string | null;
+    primary_owners: any | null;
+    secondary_owners: any | null;
+    is_internet: boolean;
+    db_doc_id: number;
+    content: string;
+  }>;
+  llm_indices: any[];
+}
+
 // Initialize MCP server
 const server = new McpServer({
   name: "context-bank",
   version: "1.0.0",
 });
 
-server.tool(
-  "create-chat-session",
-  "Create a chat session for querying the AtherOS's knowledge base",
-  {
-    persona_id: z.number().optional().describe("user id, default is 0"),
-    description: z
-      .string()
-      .optional()
-      .describe("description of the chat session, default is empty string"),
-  },
-  async ({
-    persona_id,
-    description,
-  }: {
-    persona_id?: number;
-    description?: string;
-  }) => {
-    const createChatSessionUrl = `${ONYX_API_BASE}/api/chat/create-chat-session`;
-    const body: CreateChatSessionRequest = {
-      persona_id: persona_id ?? 0,
-      description: description ?? "",
-    };
-    const createChatSessionData =
-      await makeOnyxRequest<CreateChatSessionResponse>(
-        createChatSessionUrl,
-        body,
-      );
-
-    if (!createChatSessionData) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Failed to create chat session for querying the AtherOS's knowledge base`,
-          },
-        ],
-      };
-    }
-
-    const chat_session_id = createChatSessionData.chat_session_id;
-    if (!chat_session_id) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: "Failed to get chat session id",
-          },
-        ],
-      };
-    }
-
-    const chatSessionText = `Chat session created for querying the AtherOS's knowledge base. Chat session id: ${chat_session_id}`;
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: chatSessionText,
-        },
-      ],
-    };
-  },
-);
+// curl -X POST "http://172.30.22.52:3000/api/chat/document-search" -H "Content-Type: application/json" -d '{"message": "Tìm kiếm tài liệu về Sipher game 1", "search_type": "semantic", "retrieval_options": { "enable_auto_detect_filters": false, "offset": 0, "limit": 3, "dedupe_docs": true}, "evaluation_type": "skip", "chunks_above": 1, "chunks_below": 1, "full_doc": false}' | jq
 
 server.tool(
-  "query-atheros",
-  "Send a message to the chat session for querying the AtherOS's knowledge base",
+  "document-search",
+  "Search for documents in the AtherOS's knowledge base",
   {
-    chat_session_id: z.string().describe("chat session id"),
-    message: z
-      .string()
-      .describe("message to send for querying the knowledge base"),
-    parent_message_id: z
-      .number()
-      .optional()
-      .describe(
-        "parent message id, if the message is a reply to a previous message, if not provided, use undefined",
-      ),
+    message: z.string().describe("message to search for"),
   },
-  async ({
-    chat_session_id,
-    message,
-    parent_message_id,
-  }: {
-    chat_session_id: string;
-    message: string;
-    parent_message_id?: number;
-  }) => {
-    const sendMessageUrl = `${ONYX_API_BASE}/api/chat/send-message`;
-    const body: SendMessageRequest = {
-      alternate_assistant_id: 0,
-      chat_session_id: chat_session_id,
+  async ({ message }: { message: string }) => {
+    const searchUrl = `${ONYX_API_BASE}/api/chat/document-search`;
+    const body: DocumentSearchRequest = {
       message: message,
-      prompt_id: 0,
-      search_doc_ids: null,
-      file_descriptors: [],
-      regenerate: false,
+      search_type: "semantic",
       retrieval_options: {
-        run_search: "auto",
-        real_time: true,
-        filters: {
-          source_type: null,
-          document_set: null,
-          time_cutoff: null,
-          tags: [],
-        },
+        enable_auto_detect_filters: false,
+        offset: 0,
+        limit: 3,
+        dedupe_docs: true,
       },
-      prompt_override: null,
-      llm_override: {
-        model_provider: "Default",
-        model_version: "gpt-4o",
-      },
-      use_agentic_search: false,
-      parent_message_id: parent_message_id ?? null,
+      evaluation_type: "skip",
+      chunks_above: 1,
+      chunks_below: 1,
+      full_doc: false,
     };
 
-    const sendMessageResponse = await makeOnyxRequestStream<any>(
-      sendMessageUrl,
-      body,
-    );
+    const documentSearchResponse = await makeOnyxRequest<any>(searchUrl, body);
 
-    if (!sendMessageResponse) {
+    if (!documentSearchResponse) {
       return {
         content: [
           {
             type: "text",
-            text: `Failed to send message ${message} to chat session ${chat_session_id}`,
+            text: `Failed to search for documents in the AtherOS's knowledge base`,
           },
         ],
       };
     }
-
-    const messageResponse = sendMessageResponse.message;
-    if (!messageResponse) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Failed to get message response from chat session ${chat_session_id}`,
-          },
-        ],
-      };
-    }
-
-    const messageResponseText = formatSendMessageResponse(sendMessageResponse);
 
     return {
-      content: [
+      content: documentSearchResponse?.top_documents?.map(
+        (doc: { content?: string; link?: string }) => ({
+          type: "text",
+          text: doc.content + "\n" + doc.link,
+        }),
+      ) ?? [
         {
           type: "text",
-          text: messageResponseText,
+          text: `No documents found in the AtherOS's knowledge base`,
         },
       ],
     };
   },
 );
+
+// server.tool(
+//   "create-chat-session",
+//   "Create a chat session for querying the AtherOS's knowledge base",
+//   {
+//     persona_id: z.number().optional().describe("user id, default is 0"),
+//     description: z
+//       .string()
+//       .optional()
+//       .describe("description of the chat session, default is empty string"),
+//   },
+//   async ({
+//     persona_id,
+//     description,
+//   }: {
+//     persona_id?: number;
+//     description?: string;
+//   }) => {
+//     const createChatSessionUrl = `${ONYX_API_BASE}/api/chat/create-chat-session`;
+//     const body: CreateChatSessionRequest = {
+//       persona_id: persona_id ?? 0,
+//       description: description ?? "",
+//     };
+//     const createChatSessionData =
+//       await makeOnyxRequest<CreateChatSessionResponse>(
+//         createChatSessionUrl,
+//         body,
+//       );
+
+//     if (!createChatSessionData) {
+//       return {
+//         content: [
+//           {
+//             type: "text",
+//             text: `Failed to create chat session for querying the AtherOS's knowledge base`,
+//           },
+//         ],
+//       };
+//     }
+
+//     const chat_session_id = createChatSessionData.chat_session_id;
+//     if (!chat_session_id) {
+//       return {
+//         content: [
+//           {
+//             type: "text",
+//             text: "Failed to get chat session id",
+//           },
+//         ],
+//       };
+//     }
+
+//     const chatSessionText = `Chat session created for querying the AtherOS's knowledge base. Chat session id: ${chat_session_id}`;
+
+//     return {
+//       content: [
+//         {
+//           type: "text",
+//           text: chatSessionText,
+//         },
+//       ],
+//     };
+//   },
+// );
+
+// server.tool(
+//   "query-atheros",
+//   "Send a message to the chat session for querying the AtherOS's knowledge base",
+//   {
+//     chat_session_id: z.string().describe("chat session id"),
+//     message: z
+//       .string()
+//       .describe("message to send for querying the knowledge base"),
+//     parent_message_id: z
+//       .number()
+//       .optional()
+//       .describe(
+//         "parent message id, if the message is a reply to a previous message, if not provided, use undefined",
+//       ),
+//   },
+//   async ({
+//     chat_session_id,
+//     message,
+//     parent_message_id,
+//   }: {
+//     chat_session_id: string;
+//     message: string;
+//     parent_message_id?: number;
+//   }) => {
+//     const sendMessageUrl = `${ONYX_API_BASE}/api/chat/send-message`;
+//     const body: SendMessageRequest = {
+//       alternate_assistant_id: 0,
+//       chat_session_id: chat_session_id,
+//       message: message,
+//       prompt_id: 0,
+//       search_doc_ids: null,
+//       file_descriptors: [],
+//       regenerate: false,
+//       retrieval_options: {
+//         run_search: "auto",
+//         real_time: true,
+//         filters: {
+//           source_type: null,
+//           document_set: null,
+//           time_cutoff: null,
+//           tags: [],
+//         },
+//       },
+//       prompt_override: null,
+//       llm_override: {
+//         model_provider: "Default",
+//         model_version: "gpt-4o",
+//       },
+//       use_agentic_search: false,
+//       parent_message_id: parent_message_id ?? null,
+//     };
+
+//     const sendMessageResponse = await makeOnyxRequestStream<any>(
+//       sendMessageUrl,
+//       body,
+//     );
+
+//     if (!sendMessageResponse) {
+//       return {
+//         content: [
+//           {
+//             type: "text",
+//             text: `Failed to send message ${message} to chat session ${chat_session_id}`,
+//           },
+//         ],
+//       };
+//     }
+
+//     const messageResponse = sendMessageResponse.message;
+//     if (!messageResponse) {
+//       return {
+//         content: [
+//           {
+//             type: "text",
+//             text: `Failed to get message response from chat session ${chat_session_id}`,
+//           },
+//         ],
+//       };
+//     }
+
+//     const messageResponseText = formatSendMessageResponse(sendMessageResponse);
+
+//     return {
+//       content: [
+//         {
+//           type: "text",
+//           text: messageResponseText,
+//         },
+//       ],
+//     };
+//   },
+// );
 
 // Start the server
 async function main() {
