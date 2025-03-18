@@ -54,6 +54,7 @@ async function makeOnyxRequestStream<T>(
 ): Promise<T | null> {
   const headers = {
     "Content-Type": "application/json",
+    "X-Onyx-Authorization": process.env.ONYX_API_KEY || "",
   };
   try {
     const response = await axios.post(url, body, { headers });

@@ -11,6 +11,7 @@ dotenv.config();
 
 // Use environment variables with fallback values
 const ONYX_API_BASE = process.env.ONYX_API_BASE || "";
+const ONYX_API_KEY = process.env.ONYX_API_KEY || "";
 const LOG_LEVEL = process.env.LOG_LEVEL || "info";
 
 // Configure logging based on LOG_LEVEL
@@ -34,6 +35,26 @@ const logger = {
     }
   },
 };
+
+async function makeOnyxRequest<T>(
+  url: string,
+  body?: DocumentSearchRequest,
+): Promise<T | null> {
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Onyx-Authorization": ONYX_API_KEY,
+  };
+  try {
+    const response = await axios.post(url, body, { headers });
+    if (!response.data) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.data as T;
+  } catch (error) {
+    logger.error("Error making Onyx request:", error);
+    return null;
+  }
+}
 
 interface DocumentSearchRequest {
   message: string;
@@ -75,25 +96,6 @@ interface DocumentSearchResponse {
   llm_indices: any[];
 }
 
-async function makeOnyxRequest<T>(
-  url: string,
-  body?: DocumentSearchRequest,
-): Promise<T | null> {
-  const headers = {
-    "Content-Type": "application/json",
-  };
-  try {
-    const response = await axios.post(url, body, { headers });
-    if (!response.data) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.data as T;
-  } catch (error) {
-    logger.error("Error making Onyx request:", error);
-    return null;
-  }
-}
-
 // Initialize MCP server
 const server = new McpServer({
   name: "context-bank",
@@ -106,9 +108,9 @@ server.tool(
   {
     message: z.string().describe("message to search for"),
   },
-  async ({ message }) => {
+  async ({ message }: { message: string }) => {
     const searchUrl = `${ONYX_API_BASE}/api/chat/document-search`;
-    const body = {
+    const body: DocumentSearchRequest = {
       message: message,
       search_type: "semantic",
       retrieval_options: {
@@ -122,8 +124,9 @@ server.tool(
       chunks_below: 1,
       full_doc: false,
     };
-    const documentSearchResponse =
-      await makeOnyxRequest<DocumentSearchResponse>(searchUrl, body);
+
+    const documentSearchResponse = await makeOnyxRequest<any>(searchUrl, body);
+
     if (!documentSearchResponse) {
       return {
         content: [
@@ -134,11 +137,14 @@ server.tool(
         ],
       };
     }
+
     return {
-      content: documentSearchResponse?.top_documents?.map((doc) => ({
-        type: "text",
-        text: doc.content + "\n" + doc.link,
-      })) ?? [
+      content: documentSearchResponse?.top_documents?.map(
+        (doc: { content?: string; link?: string }) => ({
+          type: "text",
+          text: doc.content + "\n" + doc.link,
+        }),
+      ) ?? [
         {
           type: "text",
           text: `No documents found in the AtherOS's knowledge base`,
